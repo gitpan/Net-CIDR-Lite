@@ -4,10 +4,10 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.04';
+$VERSION = '0.05';
 
 my %masks;
-my @fields = qw(PACK UNPACK NBITS ZERO MASKS);
+my @fields = qw(PACK UNPACK NBITS MASKS);
 
 # Preloaded methods go here.
 
@@ -25,7 +25,7 @@ sub add {
         unless $mask =~ /^\d+$/ and 2 <= $mask and $mask <= $self->{NBITS};
     my $start = $self->{PACK}->($ip) & $self->{MASKS}[$mask]
         or confess "Bad ip address: $ip";
-    my $end = _add_bit($start, $mask);
+    my $end = $self->_add_bit($start, $mask);
     ++$$self{RANGES}{$start} || delete $$self{RANGES}{$start};
     --$$self{RANGES}{$end}   || delete $$self{RANGES}{$end};
 }
@@ -52,10 +52,12 @@ sub list {
         unless ($total) {
             while ($start lt $ip) {
                 my ($end, $bits);
-                (my $zeros = unpack("B*", $start)) =~ s/.*1//;
-                for my $mask ($nbits-length($zeros)..$nbits) {
-                    $end = _add_bit($start, $mask) or next;
-                    $bits = $mask, last if $end le $ip;
+                my $sbit = $nbits-1;
+                # Find the position of the last 1 bit
+                $sbit-- while !vec($start, $sbit^7, 1);
+                for my $pos ($sbit+1..$nbits) {
+                    $end = $self->_add_bit($start, $pos);
+                    $bits = $pos, last if $end le $ip;
                 }
                 push @results, $self->{UNPACK}->($start) . "/$bits";
                 $start = $end;
@@ -99,7 +101,6 @@ sub _init {
     $$self{PACK}  = $pack;
     $$self{UNPACK}  = $unpack;
     $$self{NBITS} = $nbits;
-    $$self{ZERO}  = "0" x $nbits;
     $$self{MASKS} = $masks{$nbits} ||= [
       map { pack("B*", substr("1" x $_ . "0" x $nbits, 0, $nbits))
           } 0..$nbits
@@ -162,7 +163,7 @@ sub add_ip {
     my $ip = shift;
     $self->_init($ip) || confess "Can't determine ip format" unless %$self;
     my $start = $self->{PACK}->($ip) or confess "Bad ip address: $ip";
-    my $end = _add_bit($start, $self->{NBITS});
+    my $end = $self->_add_bit($start, $self->{NBITS});
     ++$$self{RANGES}{$start} || delete $$self{RANGES}{$start};
     --$$self{RANGES}{$end}   || delete $$self{RANGES}{$end};
 }
@@ -178,12 +179,12 @@ sub add_range {
       or confess "Bad ip address: $ip_start";
     my $end = $self->{PACK}->($ip_end)
       or confess "Bad ip address: $ip_end";
-    my $end = _add_bit($end, $$self{NBITS});
+    my $end = $self->_add_bit($end, $$self{NBITS});
     ++$$self{RANGES}{$start} || delete $$self{RANGES}{$start};
     --$$self{RANGES}{$end}   || delete $$self{RANGES}{$end};
 }
 
-# Add ranges from another Net::CIDR::Fast object
+# Add ranges from another Net::CIDR::Lite object
 sub add_cidr {
     my $self = shift;
     my $cidr = shift;
@@ -195,23 +196,16 @@ sub add_cidr {
 
 # Increment the ip address at the given bit position
 sub _add_bit {
-    my ($start, $add) = @_;
-    $add--;
-    my $end = unpack("B*", $start);
-    {
-        if ($add < 0) {
-            return "\xFF" x (length($start)+1) if $end eq "0" x length($end);
-            return;
-        }
-        if (substr($end, $add, 1) eq "0") {
-            substr($end, $add, 1) = "1";
-            last;
-        }
-        substr($end, $add, 1) = "0";
-        $add--;
-        redo;
+    my $self= shift;
+    my $base= shift;
+    my $bits= shift()-1;
+    while (vec($base, $bits^7, 1)) {
+        vec($base, $bits^7, 1) = 0;
+        $bits--;
+        return "\xff"x(1+length($base))   if  $bits < 0;
     }
-    pack("B*", $end);
+    vec($base, $bits^7, 1) = 1;
+    return $base;
 }
 
 1;
@@ -219,7 +213,7 @@ __END__
 
 =head1 NAME
 
-Net::CIDR::Lite - Perl extension for merging IPv4 CIDR addresses
+Net::CIDR::Lite - Perl extension for merging IPv4 or IPv6 CIDR addresses
 
 =head1 SYNOPSIS
 
@@ -231,7 +225,8 @@ Net::CIDR::Lite - Perl extension for merging IPv4 CIDR addresses
 
 =head1 DESCRIPTION
 
-Faster alternative to Net::CIDR. Works for IPv4 and IPv6 addresses.
+Faster alternative to Net::CIDR when merging a large number
+of CIDR address ranges. Works for IPv4 and IPv6 addresses.
 
 =head1 METHODS
 

@@ -1,8 +1,15 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.05  Thu Oct 25 10:05:00 2001
+    - Changed some unpack/pack code to use vec(). Thanks to Tye
+      for the knowledge and know-how (especially on how to efficiently use
+      the little-endian vec function on a big-endian string).
+      Unpack/pack w/operations on strings is sometimes faster
+      than the vec() method for some strings, but probably not
+      in the common case.
 0.04  Tue Oct 23 18:05:00 2001
     - bug in add_range() wasn't entering the end ip correctly.
-    - added list_range() function. Probably not very useful since
+    - added list_range() function. Not sure if its useful since
       it doesn't output ranges in CIDR netblock sizes. Could be changed
       if desired, let me know either way.
 0.03  Tue Oct 23 17:05:00 2001
@@ -14,8 +21,11 @@ Revision history for Perl extension Net::CIDR::Lite.
     - Clean up null nodes on 'as you go' on contiguous ranges (thanks
       again to Tye for the idea and directly lifted code).
     - Added more methods to simulate functionality of Net::CIDR and then
-      some (e.g. added add_range() function).
+      some (e.g. added add_range() function). Still don't have
+      octets function.
 0.01  Tue Oct 16 09:26:01 2001
+    - Basic idea to use a hash to store the ranges improves speed
+      over Net::CIDR ( O(n*n) vs. O(n*log(n)) for you big O fans).
 	- original version; created by h2xs 1.21 with options
 		-A -X -n Net::CIDR::Lite
 
