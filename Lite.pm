@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.11';
+$VERSION = '0.12';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -86,13 +86,13 @@ sub list {
 
 sub list_range {
     my $self = shift;
-    my $nbits = $$self{NBITS};
     my ($start, $total);
     my @results;
     for my $ip (sort keys %{$$self{RANGES}}) {
         $start = $ip unless $total;
         $total += $$self{RANGES}{$ip};
         unless ($total) {
+            $ip = $self->_minus_one($ip);
             push @results,
                 $self->{UNPACK}->($start) . "-" . $self->{UNPACK}->($ip);
         }
@@ -220,6 +220,8 @@ sub add_cidr {
 }
 
 # Increment the ip address at the given bit position
+# bit position is in range 1 to # of bits in ip
+# where 1 is high order bit, # of bits is low order bit
 sub _add_bit {
     my $self= shift;
     my $base= shift;
@@ -231,6 +233,15 @@ sub _add_bit {
     }
     vec($base, $bits^7, 1) = 1;
     return $base;
+}
+
+# Subtract one from an ip address
+sub _minus_one {
+  my $self = shift;
+  my $nbits = $self->{NBITS};
+  my $ip = ~shift;
+  $ip = $self->_add_bit($ip, $nbits) for 0..1;
+  $self->_add_bit(~$ip, $nbits);
 }
 
 sub find {
@@ -254,7 +265,7 @@ sub bin_find {
     my $find = $self->{FIND};
     my ($start, $end) = (0, $#$find);
     return unless $ip ge $find->[$start] and $ip lt $find->[$end];
-    while ($end - $start > 1) {
+    while ($end - $start > 0) {
         my $mid = int(($start+$end)/2);
         if ($start == $mid) {
             if ($find->[$end] eq $ip) {
@@ -271,10 +282,8 @@ sub prep_find {
     my $self = shift;
     $self->clean;
     $self->{PCT} = shift || 20;
-    $self->{FIND} = [];
-    for my $ip (sort keys %{$self->{RANGES}}) {
-        push @{$self->{FIND}}, $ip;
-    }
+    my $aref = $self->{FIND} = [];
+    push @$aref, $_ for sort keys %{$self->{RANGES}};
     $self;
 }
 
@@ -499,7 +508,7 @@ if not.
 
  $found = $cidr->find($ip);
 
-Returns true if the ip address is found in the CIDR range. Undef if not.
+Returns true if the ip address is found in the CIDR range. False if not.
 Not extremely efficient, is O(n*log(n)) to sort the ranges in the
 cidr object O(n) to search through the ranges in the cidr object.
 The sort is cached on the first call and used in subsequent calls,

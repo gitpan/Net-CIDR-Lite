@@ -27,6 +27,7 @@ my @list = $cidr->list;
 ok(scalar(@list), 1);
 ok($list[0], "209.152.214.112/29");
 
+ok($cidr->find('209.152.214.112'));
 ok($cidr->find('209.152.214.114'));
 ok(! $cidr->find('209.152.214.111'));
 ok(! $cidr->find('209.152.214.120'));
@@ -75,3 +76,15 @@ ok($lkup->{$new_ip}{label});
 my $zero = Net::CIDR::Lite->new("0.0.0.0/8");
 my @zero = $zero->list;
 ok($zero[0] eq "0.0.0.0/8");
+
+# Make sure list range works
+my $cidr_tlist = Net::CIDR::Lite->new("156.147.0.0/16");
+my @range = $cidr_tlist->list_range;
+ok(@range == 1);
+ok($range[0] eq "156.147.0.0-156.147.255.255");
+
+# Test find in beginning of range
+my $cidr_find =
+  Net::CIDR::Lite->new('218.48.0.0/13','218.144.0.0/12','218.232.0.0/15');
+
+ok($cidr_find->bin_find('218.144.0.0'));

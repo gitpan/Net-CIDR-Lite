@@ -1,7 +1,13 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.12  Sun Jul 14 22:00:00 2002
+    - Fixed off by one error on end of range in list_range method.
+      found by Allen Smith. added test.
+    - binary find was not working when target address was beginning
+      of a range. Also found by Allen Smith. added another test.
 0.11  Mon Apr 15 21:05:00 2002
     - Fixed infinite loop in list() when 0.0.0.0/x was given as an address.
+      found by Allen Smith. added test.
 0.10  Tue Nov 27 09:05:00 2001
     - Allow whitespace around '-' in add_range. So that what I posted
       in a dead newsgroup on Usenet will actually work :-)
