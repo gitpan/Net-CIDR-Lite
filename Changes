@@ -1,5 +1,7 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.09  Mon Nov 26 21:05:00 2001
+    - Fixed warning in add_range().
 0.08  Mon Nov 26 10:05:00 2001
     - Fixed docs.
 0.07  Wed Oct 31 10:05:00 2001

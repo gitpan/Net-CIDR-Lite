@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.08';
+$VERSION = '0.09';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -197,7 +197,7 @@ sub add_range {
     my $end = $self->{PACK}->($ip_end)
       or confess "Bad ip address: $ip_end";
     confess "Start IP is greater than end IP" if $start gt $end;
-    my $end = $self->_add_bit($end, $$self{NBITS});
+    $end = $self->_add_bit($end, $$self{NBITS});
     ++$$self{RANGES}{$start} || delete $$self{RANGES}{$start};
     --$$self{RANGES}{$end}   || delete $$self{RANGES}{$end};
     $self;
