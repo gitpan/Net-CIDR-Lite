@@ -1,12 +1,18 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.04  Tue Oct 23 18:05:00 2001
+    - bug in add_range() wasn't entering the end ip correctly.
+    - added list_range() function. Probably not very useful since
+      it doesn't output ranges in CIDR netblock sizes. Could be changed
+      if desired, let me know either way.
 0.03  Tue Oct 23 17:05:00 2001
     - _compress_ipv6() was not stripping leading zeros within a block.
 0.02  Tue Oct 23 14:45:00 2001
     - Do addition with pseudo-bit manipulation (thanks to Tye for
       initial idea, may go to complete binary operations in the future).
     - Added IPv6 support.
-    - Clean up nodes on contiguous ranges (thanks again to Tye for the idea).
+    - Clean up null nodes on 'as you go' on contiguous ranges (thanks
+      again to Tye for the idea and directly lifted code).
     - Added more methods to simulate functionality of Net::CIDR and then
       some (e.g. added add_range() function).
 0.01  Tue Oct 16 09:26:01 2001

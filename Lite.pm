@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.03';
+$VERSION = '0.04';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS ZERO MASKS);
@@ -60,6 +60,22 @@ sub list {
                 push @results, $self->{UNPACK}->($start) . "/$bits";
                 $start = $end;
             }
+        }
+    }
+    wantarray ? @results : \@results;
+}
+
+sub list_range {
+    my $self = shift;
+    my $nbits = $$self{NBITS};
+    my ($start, $total);
+    my @results;
+    for my $ip (sort keys %{$$self{RANGES}}) {
+        $start = $ip unless $total;
+        $total += $$self{RANGES}{$ip};
+        unless ($total) {
+            push @results,
+                $self->{UNPACK}->($start) . "-" . $self->{UNPACK}->($ip);
         }
     }
     wantarray ? @results : \@results;
@@ -162,7 +178,7 @@ sub add_range {
       or confess "Bad ip address: $ip_start";
     my $end = $self->{PACK}->($ip_end)
       or confess "Bad ip address: $ip_end";
-    my $end = _add_bit($start, $$self{NBITS});
+    my $end = _add_bit($end, $$self{NBITS});
     ++$$self{RANGES}{$start} || delete $$self{RANGES}{$start};
     --$$self{RANGES}{$end}   || delete $$self{RANGES}{$end};
 }
