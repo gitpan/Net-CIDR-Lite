@@ -32,3 +32,11 @@ $cidr6->add("dead:beef:0000:0000:0000:0000:0000:0001/128");
 my @list6 = $cidr6->list;
 ok(scalar(@list6), 1);
 ok($list6[0], "dead:beef::/127");
+
+my $cidr6a = Net::CIDR::Lite->new;
+$cidr6a->add("dead:beef:0000:0000:0000:0000:0000:0002/127");
+$cidr6a->add("dead:beef:0000:0000:0000:0000:0000:0004/127");
+my @list6a = $cidr6a->list;
+ok(scalar(@list6a), 2);
+ok($list6a[0], "dead:beef::2/127");
+ok($list6a[1], "dead:beef::4/127");

@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.02';
+$VERSION = '0.03';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS ZERO MASKS);
@@ -136,6 +136,7 @@ sub _compress_ipv6 {
         }
         $ip =~ s/$max/::/;
     }
+    $ip =~ s/:0{1,3}/:/g;
     $ip;
 }
 

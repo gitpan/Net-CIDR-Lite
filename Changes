@@ -1,5 +1,7 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.03  Tue Oct 23 17:05:00 2001
+    - _compress_ipv6() was not stripping leading zeros within a block.
 0.02  Tue Oct 23 14:45:00 2001
     - Do addition with pseudo-bit manipulation (thanks to Tye for
       initial idea, may go to complete binary operations in the future).
