@@ -1,5 +1,9 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.10  Tue Nov 27 09:05:00 2001
+    - Allow whitespace around '-' in add_range. So that what I posted
+      in a dead newsgroup on Usenet will actually work :-)
+    - Document add_any() method.
 0.09  Mon Nov 26 21:05:00 2001
     - Fixed warning in add_range().
 0.08  Mon Nov 26 10:05:00 2001
@@ -10,7 +14,7 @@ Revision history for Perl extension Net::CIDR::Lite.
       # of ranges) is below some percentage (default 4%). The initial
       search setup is still O(n*log(n)) for the sort, but it can speed up
       subsequent searches for IP addresses. I haven't benchmarked
-      any of this, so for you benchmark fanatics who use this module,
+      any of this, so for you Benchmark fanatics who use this module,
       let me know some stats, please :-)
     - Added binary search capability to N::C::L find method.
     - Fixed NCL::Span find method (never trust version 1 of this stuff).

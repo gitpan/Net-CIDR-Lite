@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.09';
+$VERSION = '0.10';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -22,8 +22,11 @@ sub new {
 sub add_any {
     my $self = shift;
     for (@_) {
-        tr|/|| && do { $self->add($_), next };
-        tr|-|| && do { $self->add_range($_), next };
+        tr|/|| && do { $self->add($_); next };
+        tr|-|| && do { $self->add_range($_); next };
+        UNIVERSAL::isa($_, 'Net::CIDR::Lite') && do {
+            $self->add_cidr($_); next
+        };
         $self->add_ip($_), next;
     }
     $self;
@@ -189,7 +192,8 @@ sub add_ip {
 sub add_range {
     my $self = shift;
     local $_ = shift;
-    my ($ip_start, $ip_end) = split "-";
+    my ($ip_start, $ip_end, $crud) = split /\s*-\s*/;
+    confess "Only one hyphen allowed in range" if defined $crud;
     $self->_init($ip_start) || confess "Can't determine ip format"
       unless %$self;
     my $start = $self->{PACK}->($ip_start)
@@ -207,6 +211,7 @@ sub add_range {
 sub add_cidr {
     my $self = shift;
     my $cidr = shift;
+    confess "Not a CIDR object" unless UNIVERSAL::isa($cidr, 'Net::CIDR::Lite');
     unless (%$self) {
         @$self{@fields} = @$cidr{@fields};
     }
@@ -423,11 +428,12 @@ of CIDR address ranges. Works for IPv4 and IPv6 addresses.
 =item new() 
 
  $cidr = Net::CIDR::Lite->new
+ $cidr = Net::CIDR::Lite->new(@args)
 
 Creates an object to represent a list of CIDR address ranges.
 No particular format is set yet; once an add method is called
 with a IPv4 or IPv6 format, only that format may be added for this
-cidr object.
+cidr object. Any arguments supplied are passed to add_any() (see below).
 
 =item add()
 
@@ -452,6 +458,13 @@ Adds address ranges from one object to another object.
  $cidr->add_ip($ip_address)
 
 Adds a single IP address to the list.
+
+=item add_any()
+
+ $cidr->add_any($cidr_or_range_or_address);
+
+Determines format of range or single ip address and calls add(),
+add_range(), add_cidr(), or add_ip() as appropriate.
 
 =item $cidr->clean()
 
