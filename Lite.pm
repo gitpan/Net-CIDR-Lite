@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.07';
+$VERSION = '0.08';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -487,7 +487,7 @@ be called on the cidr object.
 
 Caches the result of sorting the ip addresses. Implicitly called on the first
 find call, but must be explicitly called if more addresses are added to
-the cidr object. Will do a binary search if the number of ranges is
+the cidr object. find() will do a binary search if the number of ranges is
 greater than or equal to $num (default 20);
 
 =item $cidr->spanner()
@@ -498,7 +498,7 @@ Creates a spanner object to find out if multiple ip addresses are within
 multiple labeled address ranges. May also be called as (with or without
 any arguments):
 
- Net::CIDR::Lite->new($cidr1, $label1, $cidr2, $label2, ...);
+ Net::CIDR::Lite::Span->new($cidr1, $label1, $cidr2, $label2, ...);
 
 =item $spanner->add()
 
@@ -514,7 +514,7 @@ hyphenated IP address range, or a single IP address.
 
 Look up which range(s) ip addresses are in, and return a lookup table
 of the results, with the keys being the ip addresses, and the value an
-array reference of which address ranges the ip address is in.
+hash reference of which address ranges the ip address is in.
 
 =item $spanner->prep_find()
 
