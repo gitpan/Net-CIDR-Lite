@@ -70,3 +70,8 @@ $spanner->prep_find(50);
 $lkup = $spanner->find($new_ip);
 ok($lkup->{$new_ip}{HAL});
 ok($lkup->{$new_ip}{label});
+
+# Make sure 0.0.0.0 works
+my $zero = Net::CIDR::Lite->new("0.0.0.0/8");
+my @zero = $zero->list;
+ok($zero[0] eq "0.0.0.0/8");

@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.10';
+$VERSION = '0.11';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -71,7 +71,7 @@ sub list {
                 my ($end, $bits);
                 my $sbit = $nbits-1;
                 # Find the position of the last 1 bit
-                $sbit-- while !vec($start, $sbit^7, 1);
+                $sbit-- while !vec($start, $sbit^7, 1) and $sbit>0;
                 for my $pos ($sbit+1..$nbits) {
                     $end = $self->_add_bit($start, $pos);
                     $bits = $pos, last if $end le $ip;
@@ -417,6 +417,7 @@ Net::CIDR::Lite - Perl extension for merging IPv4 or IPv6 CIDR addresses
   my $cidr = Net::CIDR::Lite->new;
   $cidr->add($cidr_address);
   @cidr_list = $cidr->list;
+  @ip_ranges = $cidr->list_range;
 
 =head1 DESCRIPTION
 
@@ -474,6 +475,8 @@ If you are going to call the list method more than once on the
 same data, then for optimal performance, you can call this to
 purge null nodes in overlapping ranges from the list. Boundary
 nodes in contiguous ranges are automatically purged during add().
+Only useful when ranges overlap or when contiguous ranges are added
+out of order.
 
 =item $cidr->list()
 
@@ -482,6 +485,15 @@ nodes in contiguous ranges are automatically purged during add().
 
 Returns a list of the merged CIDR addresses. Returns an array if called
 in list context, an array reference if not.
+
+=item $cidr->list_range()
+
+ @cidr_list = $cidr->list;
+ $list_ref  = $cidr->list;
+
+Returns a list of the merged addresses, but in hyphenated range
+format. Returns an array if called in list context, an array reference
+if not.
 
 =item $cidr->find()
 
