@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.14';
+$VERSION = '0.15';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -241,7 +241,7 @@ sub _minus_one {
   my $self = shift;
   my $nbits = $self->{NBITS};
   my $ip = shift;
-  my $ip = ~$ip;
+  $ip = ~$ip;
   $ip = $self->_add_bit($ip, $nbits);
   $ip = $self->_add_bit($ip, $nbits);
   $self->_add_bit(~$ip, $nbits);

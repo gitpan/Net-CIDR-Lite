@@ -8,7 +8,7 @@
 use Test;
 use strict;
 $|++;
-BEGIN { plan tests => 21 };
+BEGIN { plan tests => 28 };
 use Net::CIDR::Lite;
 ok(1); # If we made it this far, we're ok.
 
@@ -80,8 +80,7 @@ ok($zero[0] eq "0.0.0.0/8");
 # Make sure list range works
 my $cidr_tlist = Net::CIDR::Lite->new("156.147.0.0/16");
 my @range = $cidr_tlist->list_range;
-my $range_len = @range;
-ok($range_len, 1);
+ok(scalar(@range), 1);
 ok($range[0], "156.147.0.0-156.147.255.255");
 
 # Test find in beginning of range
@@ -91,6 +90,5 @@ my $cidr_find =
 ok($cidr_find->bin_find('218.144.0.0'));
 
 my @list_zero = Net::CIDR::Lite->new('0.0.0.0/32')->list_range;
-my $lz = @list_zero;
-ok($lz, 1);
+ok(scalar(@list_zero), 1);
 ok($list_zero[0], '0.0.0.0-0.0.0.0');
