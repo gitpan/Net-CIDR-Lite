@@ -1,5 +1,11 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.06  Tue Oct 30 10:05:00 2001
+    - Add find methods, one for ip lookup within a single cidr object, and
+      another as an Array::IntSpan style lookup, but for looking up addresses
+      in labeled cidr objects. Both are moderately inefficient for looking up
+      single ip addresses multiple times, but the latter is fairly efficient
+      at looking up many ip addresses all at once.
 0.05  Thu Oct 25 10:05:00 2001
     - Changed some unpack/pack code to use vec(). Thanks to Tye
       for the knowledge and know-how (especially on how to efficiently use

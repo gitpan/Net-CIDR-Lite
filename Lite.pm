@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.05';
+$VERSION = '0.06';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -14,7 +14,19 @@ my @fields = qw(PACK UNPACK NBITS MASKS);
 sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
-    bless {}, $class;
+    my $self = bless {}, $class;
+    $self->add_any($_) for @_;
+    $self;
+}
+
+sub add_any {
+    my $self = shift;
+    for (@_) {
+        tr|/|| && do { $self->add($_), next };
+        tr|-|| && do { $self->add_range($_), next };
+        $self->add_ip($_), next;
+    }
+    $self;
 }
 
 sub add {
@@ -28,6 +40,7 @@ sub add {
     my $end = $self->_add_bit($start, $mask);
     ++$$self{RANGES}{$start} || delete $$self{RANGES}{$start};
     --$$self{RANGES}{$end}   || delete $$self{RANGES}{$end};
+    $self;
 }
 
 sub clean {
@@ -35,10 +48,11 @@ sub clean {
     my $ranges = $$self{RANGES};
     my $total;
     $$self{RANGES} = {
-      map { $total ? ($total+=$$ranges{$_})? () : ($_=>1)
-                   : do { $total+=$$ranges{$_}; ($_=>-1) }
+      map { $total ? ($total+=$$ranges{$_})? () : ($_=>-1)
+                   : do { $total+=$$ranges{$_}; ($_=>1) }
           } sort keys %$ranges
     };
+    $self;
 }
 
 sub list {
@@ -105,6 +119,8 @@ sub _init {
       map { pack("B*", substr("1" x $_ . "0" x $nbits, 0, $nbits))
           } 0..$nbits
     ];
+    $$self{RANGES} = {};
+    $self;
 }
 
 sub _pack_ipv4 {
@@ -166,6 +182,7 @@ sub add_ip {
     my $end = $self->_add_bit($start, $self->{NBITS});
     ++$$self{RANGES}{$start} || delete $$self{RANGES}{$start};
     --$$self{RANGES}{$end}   || delete $$self{RANGES}{$end};
+    $self;
 }
 
 # Add a hyphenated range of IP addresses
@@ -179,9 +196,11 @@ sub add_range {
       or confess "Bad ip address: $ip_start";
     my $end = $self->{PACK}->($ip_end)
       or confess "Bad ip address: $ip_end";
+    confess "Start IP is greater than end IP" if $start gt $end;
     my $end = $self->_add_bit($end, $$self{NBITS});
     ++$$self{RANGES}{$start} || delete $$self{RANGES}{$start};
     --$$self{RANGES}{$end}   || delete $$self{RANGES}{$end};
+    $self;
 }
 
 # Add ranges from another Net::CIDR::Lite object
@@ -192,6 +211,7 @@ sub add_cidr {
         @$self{@fields} = @$cidr{@fields};
     }
     $$self{RANGES}{$_} += $$cidr{RANGES}{$_} for keys %{$$cidr{RANGES}};
+    $self;
 }
 
 # Increment the ip address at the given bit position
@@ -206,6 +226,103 @@ sub _add_bit {
     }
     vec($base, $bits^7, 1) = 1;
     return $base;
+}
+
+sub find {
+    my $self = shift;
+    $self->prep_find unless $self->{FIND};
+    my $this_ip = $self->{PACK}->(shift);
+    my $ranges = $self->{RANGES};
+    my $last = -1;
+    for my $ip (@{$self->{FIND}}) {
+        last if $this_ip lt $ip;
+        $last = $ranges->{$ip};
+    }
+    $last > 0;
+}
+
+sub prep_find {
+    my $self = shift;
+    $self->clean;
+    $self->{FIND} = [];
+    for my $ip (sort keys %{$self->{RANGES}}) {
+        push @{$self->{FIND}}, $ip;
+    }
+    $self;
+}
+
+sub spanner {
+    Net::CIDR::Lite::Span->new(@_);
+}
+
+sub ranges {
+    sort keys %{shift->{RANGES}};
+}
+
+sub packer { shift->{PACK} }
+sub unpacker { shift->{UNPACK} }
+
+package Net::CIDR::Lite::Span;
+use Carp qw(confess);
+
+sub new {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    my $self = bless {RANGES=>{}}, $class;
+    $self->add(@_);
+}
+
+sub add {
+    my $self = shift;
+    my $ranges = $self->{RANGES};
+    if (@_ && !$self->{PACK}) {
+        $self->{PACK} = $_[0]->packer;
+        $self->{UNPACK} = $_[0]->unpacker;
+    }
+    while (@_) {
+        my ($cidr, $label) = (shift, shift);
+        $cidr = Net::CIDR::Lite->new($cidr) unless ref($cidr);
+        $cidr->clean;
+        for my $ip ($cidr->ranges) {
+            push @{$ranges->{$ip}}, $label;
+        }
+    }
+    $self;
+}
+
+sub find {
+    my $self = shift;
+    my $unpack = $self->{UNPACK};
+    my $ranges = $self->{RANGES};
+    my @ips = sort map { $self->{PACK}->($_) || confess "Bad IP: $_" } @_;
+    my (%results, %in_range);
+    $self->prep_find unless $self->{FIND};
+    my $last;
+    for my $ip (@{$self->{FIND}}) {
+        if ($ips[0] lt $ip) {
+            my @keys = grep $in_range{$_}, sort keys %in_range;
+            my $key_str = join "|", @keys;
+            my $in_range = $self->{CACHE}{$key_str} ||= { map {$_=>1} @keys };
+            $results{$unpack->(shift @ips)} = $in_range
+                  while @ips and $ips[0] lt $ip;
+        }
+        last unless @ips;
+        $in_range{$_} = ! $in_range{$_} for @{$ranges->{$ip}};
+    }
+    \%results;
+}
+
+sub prep_find {
+    my $self = shift;
+    $self->{FIND} = [ sort keys %{$self->{RANGES}} ];
+    $self->{CACHE} = {};
+    $self;
+}
+
+sub clean {
+    my $self = shift;
+    my $ip = $self->{PACK}->(shift) || return;
+    $self->{UNPACK}->($ip);
 }
 
 1;
@@ -280,10 +397,68 @@ nodes in contiguous ranges are automatically purged during add().
 Returns a list of the merged CIDR addresses. Returns an array if called
 in list context, an array reference if not.
 
+=item $cidr->find()
+
+ $found = $cidr->find($ip);
+
+Returns true if the ip address is found in the CIDR range. Undef if not.
+Not extremely efficient, is O(n*log(n)) to sort the ranges in the
+cidr object O(n) to search through the ranges in the cidr object.
+The sort is cached on the first call and used in subsequent calls,
+but if more addresses are added to the cidr object, prep_find() must
+be called on the cidr object.
+
+=item $cidr->prep_find()
+
+Caches the result of sorting the ip addresses. Implicitly called on the first
+find call, but must be explicitly called if more addresses are added to
+the cidr object.
+
+=item $cidr->spanner()
+
+ $spanner = $cidr1->spanner($label1, $cidr2, $label2, ...);
+
+Creates a spanner object to find out if multiple ip addresses are within
+multiple labeled address ranges. May also be called as (with or without
+any arguments):
+
+ Net::CIDR::Lite->new($cidr1, $label1, $cidr2, $label2, ...);
+
+=item $spanner->add()
+
+ $spanner->add($cidr1, $label1, $cidr2, $label2,...);
+
+Adds labeled address ranges to the spanner object. The 'address range' may
+be a Net::CIDR::Lite object, a single CIDR address range, a single
+hyphenated IP address range, or a single IP address.
+
+=item $spanner->find()
+
+ $href = $spanner->find(@ip_addresses);
+
+Look up which range(s) ip addresses are in, and return a lookup table
+of the results, with the keys being the ip addresses, and the value an
+array reference of which address ranges the ip address is in.
+
+=item $spanner->find_prep()
+
+Called implicitly the first time $spanner->find(..) is called, must be called
+again if more cidr objects are added to the spanner object.
+
+=item $spanner->clean()
+
+ $clean_address = $spanner->clean($ip_address);
+
+Validates a returns a cleaned up version of an ip address (which is
+what you will find as the key in the result from the $spanner->find(..),
+not necessarily what the original argument looked like). E.g. removes
+unnecessary leading zeros, removes null blocks from IPv6
+addresses, etc.
+
 =head1 CAVEATS
 
-Garbage in/garbage out. This module does validate ip address formats
-but does not (yet) validate the cidr mask value.
+Garbage in/garbage out. This module does do validation, but maybe
+not enough to suit your needs.
 
 =head1 AUTHOR
 
