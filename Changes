@@ -1,5 +1,15 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.07  Wed Oct 31 10:05:00 2001
+    - Lifted some code from Array::IntSpan and tweaked it for my
+      purposes to do a binary search if the (# of IP addresses)/(the
+      # of ranges) is below some percentage (default 4%). The initial
+      search setup is still O(n*log(n)) for the sort, but it can speed up
+      subsequent searches for IP addresses. I haven't benchmarked
+      any of this, so for you benchmark fanatics who use this module,
+      let me know some stats, please :-)
+    - Added binary search capability to N::C::L find method.
+    - Fixed NCL::Span find method (never trust version 1 of this stuff).
 0.06  Tue Oct 30 10:05:00 2001
     - Add find methods, one for ip lookup within a single cidr object, and
       another as an Array::IntSpan style lookup, but for looking up addresses

@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.06';
+$VERSION = '0.07';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -231,6 +231,7 @@ sub _add_bit {
 sub find {
     my $self = shift;
     $self->prep_find unless $self->{FIND};
+    return $self->bin_find(@_) unless @{$self->{FIND}} < $self->{PCT};
     my $this_ip = $self->{PACK}->(shift);
     my $ranges = $self->{RANGES};
     my $last = -1;
@@ -241,9 +242,30 @@ sub find {
     $last > 0;
 }
 
+sub bin_find {
+    my $self = shift;
+    my $ip = $self->{PACK}->(shift);
+    $self->prep_find unless $self->{FIND};
+    my $find = $self->{FIND};
+    my ($start, $end) = (0, $#$find);
+    return unless $ip ge $find->[$start] and $ip lt $find->[$end];
+    while ($end - $start > 1) {
+        my $mid = int(($start+$end)/2);
+        if ($start == $mid) {
+            if ($find->[$end] eq $ip) {
+                $start = $end;
+            } else { $end = $start }
+        } else {
+            ($find->[$mid] lt $ip ? $start : $end) = $mid;
+        }
+    }
+    $self->{RANGES}{$find->[$start]} > 0;
+}
+
 sub prep_find {
     my $self = shift;
     $self->clean;
+    $self->{PCT} = shift || 20;
     $self->{FIND} = [];
     for my $ip (sort keys %{$self->{RANGES}}) {
         push @{$self->{FIND}}, $ip;
@@ -292,30 +314,81 @@ sub add {
 
 sub find {
     my $self = shift;
+    my $pack   = $self->{PACK};
     my $unpack = $self->{UNPACK};
-    my $ranges = $self->{RANGES};
-    my @ips = sort map { $self->{PACK}->($_) || confess "Bad IP: $_" } @_;
-    my (%results, %in_range);
+    my %results;
+    my $in_range;
     $self->prep_find unless $self->{FIND};
+    return {} unless @_;
+    return $self->bin_find(@_) if @_/@{$self->{FIND}} < $self->{PCT};
+    my @ips = sort map { $pack->($_) || confess "Bad IP: $_" } @_;
     my $last;
     for my $ip (@{$self->{FIND}}) {
         if ($ips[0] lt $ip) {
-            my @keys = grep $in_range{$_}, sort keys %in_range;
-            my $key_str = join "|", @keys;
-            my $in_range = $self->{CACHE}{$key_str} ||= { map {$_=>1} @keys };
-            $results{$unpack->(shift @ips)} = $in_range
-                  while @ips and $ips[0] lt $ip;
+            $results{$unpack->(shift @ips)} = $self->_in_range($last)
+              while @ips and $ips[0] lt $ip;
         }
         last unless @ips;
-        $in_range{$_} = ! $in_range{$_} for @{$ranges->{$ip}};
+        $last = $ip;
+    }
+    if (@ips) {
+        my $no_range = $self->_in_range({});
+        $results{$unpack->(shift @ips)} = $no_range while @ips;
     }
     \%results;
 }
 
+sub bin_find {
+    my $self = shift;
+    return {} unless @_;
+    $self->prep_find unless $self->{FIND};
+    my $pack   = $self->{PACK};
+    my $unpack = $self->{UNPACK};
+    my $find   = $self->{FIND};
+    my %results;
+    for my $ip ( map { $pack->($_) || confess "Bad IP: $_" } @_) {
+        my ($start, $end) = (0, $#$find);
+        $results{$unpack->($ip)} = $self->_in_range, next
+          unless $ip ge $find->[$start] and $ip lt $find->[$end];
+        while ($start < $end) {
+            my $mid = int(($start+$end)/2);
+            if ($start == $mid) {
+                if ($find->[$end] eq $ip) {
+                    $start = $end;
+                } else { $end = $start }
+            } else {
+                ($find->[$mid] lt $ip ? $start : $end) = $mid;
+            }
+        }
+        $results{$unpack->($ip)} = $self->_in_range($find->[$start]);
+    }
+    \%results;
+}
+
+sub _in_range {
+    my $self = shift;
+    my $ip = shift || '';
+    my $aref = $self->{PREPPED}{$ip} || [];
+    my $key = join "|", sort @$aref;
+    $self->{CACHE}{$key} ||= { map { $_ => 1 } @$aref };
+}
+
 sub prep_find {
     my $self = shift;
+    my $pct = shift || 4;
+    $self->{PCT} = $pct/100;
     $self->{FIND} = [ sort keys %{$self->{RANGES}} ];
+    $self->{PREPPED} = {};
     $self->{CACHE} = {};
+    my %cache;
+    my %in_range;
+    for my $ip (@{$self->{FIND}}) {
+        my $keys = $self->{RANGES}{$ip};
+        $_ = !$_ for @in_range{@$keys};
+        my @keys = grep $in_range{$_}, keys %in_range;
+        my $key_str = join "|", @keys;
+        $self->{PREPPED}{$ip} = $cache{$key_str} ||= \@keys;
+    }
     $self;
 }
 
@@ -410,9 +483,12 @@ be called on the cidr object.
 
 =item $cidr->prep_find()
 
+ $cidr->prep_find($num);
+
 Caches the result of sorting the ip addresses. Implicitly called on the first
 find call, but must be explicitly called if more addresses are added to
-the cidr object.
+the cidr object. Will do a binary search if the number of ranges is
+greater than or equal to $num (default 20);
 
 =item $cidr->spanner()
 
@@ -440,10 +516,14 @@ Look up which range(s) ip addresses are in, and return a lookup table
 of the results, with the keys being the ip addresses, and the value an
 array reference of which address ranges the ip address is in.
 
-=item $spanner->find_prep()
+=item $spanner->prep_find()
+
+ $spanner->prep_find($num);
 
 Called implicitly the first time $spanner->find(..) is called, must be called
-again if more cidr objects are added to the spanner object.
+again if more cidr objects are added to the spanner object. Will do a
+binary search if ratio of the number of ip addresses to the number of ranges
+is less than $num percent (default 4).
 
 =item $spanner->clean()
 
