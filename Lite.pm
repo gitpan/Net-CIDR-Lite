@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -38,6 +38,7 @@ sub add {
     $self->_init($ip) || confess "Can't determine ip format" unless %$self;
     confess "Bad mask $mask"
         unless $mask =~ /^\d+$/ and 2 <= $mask and $mask <= $self->{NBITS};
+    $mask += 8;
     my $start = $self->{PACK}->($ip) & $self->{MASKS}[$mask]
         or confess "Bad ip address: $ip";
     my $end = $self->_add_bit($start, $mask);
@@ -74,7 +75,7 @@ sub list {
                 $sbit-- while !vec($start, $sbit^7, 1) and $sbit>0;
                 for my $pos ($sbit+1..$nbits) {
                     $end = $self->_add_bit($start, $pos);
-                    $bits = $pos, last if $end le $ip;
+                    $bits = $pos-8, last if $end le $ip;
                 }
                 push @results, $self->{UNPACK}->($start) . "/$bits";
                 $start = $end;
@@ -105,11 +106,11 @@ sub _init {
     my $ip = shift;
     my ($nbits, $pack, $unpack);
     if (_pack_ipv4($ip)) {
-        $nbits = 32;
+        $nbits = 40;
         $pack = \&_pack_ipv4;
         $unpack = \&_unpack_ipv4;
     } elsif (_pack_ipv6($ip)) {
-        $nbits = 128;
+        $nbits = 136;
         $pack = \&_pack_ipv6;
         $unpack = \&_unpack_ipv6;
     } else {
@@ -132,11 +133,11 @@ sub _pack_ipv4 {
     for (@nums) {
         return unless /^\d{1,3}$/ and $_ <= 255;
     }
-    pack("C*", @nums);
+    pack("CC*", 0, @nums);
 }
 
 sub _unpack_ipv4 {
-    join(".", unpack("C*", shift));
+    join(".", unpack("xC*", shift));
 }
 
 sub _pack_ipv6 {
@@ -155,11 +156,11 @@ sub _pack_ipv6 {
     }
     return if $ipv4 and @nums > 6;
     $str =~ s/X/"0" x (($ipv4 ? 25 : 33)-length($str))/e if $empty;
-    pack("H*", $str).$ipv4;
+    pack("H*", "00" . $str).$ipv4;
 }
 
 sub _unpack_ipv6 {
-    _compress_ipv6(join(":", unpack("H*", shift) =~ /..../g)),
+    _compress_ipv6(join(":", unpack("xH*", shift) =~ /..../g)),
 }
 
 # Replace longest run of null blocks with a double colon
@@ -224,12 +225,12 @@ sub add_cidr {
 # where 1 is high order bit, # of bits is low order bit
 sub _add_bit {
     my $self= shift;
-    my $base= shift;
+    my $base= shift();
     my $bits= shift()-1;
     while (vec($base, $bits^7, 1)) {
         vec($base, $bits^7, 1) = 0;
         $bits--;
-        return "\xff"x(1+length($base))   if  $bits < 0;
+        return "\x01" . $base if  $bits < 0;
     }
     vec($base, $bits^7, 1) = 1;
     return $base;
@@ -239,8 +240,10 @@ sub _add_bit {
 sub _minus_one {
   my $self = shift;
   my $nbits = $self->{NBITS};
-  my $ip = ~shift;
-  $ip = $self->_add_bit($ip, $nbits) for 0..1;
+  my $ip = shift;
+  my $ip = ~$ip;
+  $ip = $self->_add_bit($ip, $nbits);
+  $ip = $self->_add_bit($ip, $nbits);
   $self->_add_bit(~$ip, $nbits);
 }
 

@@ -80,8 +80,9 @@ ok($zero[0] eq "0.0.0.0/8");
 # Make sure list range works
 my $cidr_tlist = Net::CIDR::Lite->new("156.147.0.0/16");
 my @range = $cidr_tlist->list_range;
-ok(@range == 1);
-ok($range[0] eq "156.147.0.0-156.147.255.255");
+my $range_len = @range;
+ok($range_len, 1);
+ok($range[0], "156.147.0.0-156.147.255.255");
 
 # Test find in beginning of range
 my $cidr_find =

@@ -1,5 +1,11 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.12  Mon Jul 14 02:30:00 2002
+    - internal _add_bit method was never meant to overflow, but previous
+      fix made it necessary, but it wasn't doing it correctly, so I
+      had to change the internal data structure to store N+1 bytes
+      (5 bytes for 32 bit IPv4, and 17 bytes for IPv6), and change the
+      rest of the program to deal with it.
 0.12  Sun Jul 14 22:00:00 2002
     - Fixed off by one error on end of range in list_range method.
       found by Allen Smith. added test.
