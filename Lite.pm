@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.13';
+$VERSION = '0.14';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -230,7 +230,7 @@ sub _add_bit {
     while (vec($base, $bits^7, 1)) {
         vec($base, $bits^7, 1) = 0;
         $bits--;
-        return "\x01" . $base if  $bits < 0;
+        return $base if  $bits < 0;
     }
     vec($base, $bits^7, 1) = 1;
     return $base;

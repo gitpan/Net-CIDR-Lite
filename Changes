@@ -1,6 +1,11 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
-0.12  Mon Jul 14 02:30:00 2002
+0.14  Mon Jul 14 09:00:00 2002
+    - Fixed list_range for '0.0.0.0/32' (and '::0/32'). But hey, I think
+      I was still one up on Net::CIDR proper which didn't (doesn't?)
+      work at all with any x/32 CIDR address. Besides, I needed to
+      get past lucky version 13.
+0.13  Mon Jul 14 02:30:00 2002
     - internal _add_bit method was never meant to overflow, but previous
       fix made it necessary, but it wasn't doing it correctly, so I
       had to change the internal data structure to store N+1 bytes
@@ -64,6 +69,8 @@ Revision history for Perl extension Net::CIDR::Lite.
 0.01  Tue Oct 16 09:26:01 2001
     - Basic idea to use a hash to store the ranges improves speed
       over Net::CIDR ( O(n*n) vs. O(n*log(n)) for you big O fans).
+      (created in answer to a 'puzzle' (at least I took it that way)
+      posted by Dominus on perlmonks).
 	- original version; created by h2xs 1.21 with options
 		-A -X -n Net::CIDR::Lite
 

@@ -89,3 +89,8 @@ my $cidr_find =
   Net::CIDR::Lite->new('218.48.0.0/13','218.144.0.0/12','218.232.0.0/15');
 
 ok($cidr_find->bin_find('218.144.0.0'));
+
+my @list_zero = Net::CIDR::Lite->new('0.0.0.0/32')->list_range;
+my $lz = @list_zero;
+ok($lz, 1);
+ok($list_zero[0], '0.0.0.0-0.0.0.0');
