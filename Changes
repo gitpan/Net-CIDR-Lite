@@ -1,0 +1,13 @@
+Revision history for Perl extension Net::CIDR::Lite.
+
+0.02  Tue Oct 23 14:45:00 2001
+    - Do addition with pseudo-bit manipulation (thanks to Tye for
+      initial idea, may go to complete binary operations in the future).
+    - Added IPv6 support.
+    - Clean up nodes on contiguous ranges (thanks again to Tye for the idea).
+    - Added more methods to simulate functionality of Net::CIDR and then
+      some (e.g. added add_range() function).
+0.01  Tue Oct 16 09:26:01 2001
+	- original version; created by h2xs 1.21 with options
+		-A -X -n Net::CIDR::Lite
+
