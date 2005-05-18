@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.16';
+$VERSION = '0.17';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -336,7 +336,8 @@ sub find {
     my %results;
     my $in_range;
     $self->prep_find unless $self->{FIND};
-    return {} unless @_ and @{$self->{FIND}};
+    return {} unless @_;
+    return { map { $_ => {} } @_ } unless @{$self->{FIND}};
     return $self->bin_find(@_) if @_/@{$self->{FIND}} < $self->{PCT};
     my @ips = sort map { $pack->($_) || confess "Bad IP: $_" } @_;
     my $last;
@@ -359,6 +360,7 @@ sub bin_find {
     my $self = shift;
     return {} unless @_;
     $self->prep_find unless $self->{FIND};
+    return { map { $_ => {} } @_ } unless @{$self->{FIND}};
     my $pack   = $self->{PACK};
     my $unpack = $self->{UNPACK};
     my $find   = $self->{FIND};
@@ -552,7 +554,7 @@ hyphenated IP address range, or a single IP address.
  $href = $spanner->find(@ip_addresses);
 
 Look up which range(s) ip addresses are in, and return a lookup table
-of the results, with the keys being the ip addresses, and the value an
+of the results, with the keys being the ip addresses, and the value a
 hash reference of which address ranges the ip address is in.
 
 =item $spanner->prep_find()

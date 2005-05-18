@@ -8,7 +8,7 @@
 use Test;
 use strict;
 $|++;
-BEGIN { plan tests => 30 };
+BEGIN { plan tests => 31 };
 use Net::CIDR::Lite;
 ok(1); # If we made it this far, we're ok.
 
@@ -95,7 +95,8 @@ ok($list_zero[0], '0.0.0.0-0.0.0.0');
 
 # Empty result from spanner find
 my $empty_cidr = Net::CIDR::Lite->new();
-my $empty_spanner = $cidr->spanner();
-my $empty_href = $spanner->find("127.0.0.1");
+my $empty_spanner = $empty_cidr->spanner();
+my $empty_href = $empty_spanner->find("127.0.0.1");
 ok(ref($empty_href), 'HASH');
-ok(!%$empty_href);
+ok(ref($empty_href->{"127.0.0.1"}), 'HASH');
+ok(! %{$empty_href->{"127.0.0.1"}});
