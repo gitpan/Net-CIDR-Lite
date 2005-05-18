@@ -1,5 +1,9 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.16  Wed May 18 10:00:00 2005
+    - Fixed divide by zero on find with empty spanner.
+      Reported by jgmyers via rt.cpan.org.
+    - Fixed pod errors.
 0.15  Wed Apr 16 13:00:00 2003
     - Fixed # of tests in test.pl. Thanks to CPAN testers.
     - Squelched '-w' warning about doubly declared lexical variable.

@@ -10,7 +10,7 @@ To install this module type the following:
    make test
    make install
 
-See tests (in the test.pl file) for an example.
+See tests (in the test.pl file) for examples.
 
 COPYRIGHT AND LICENCE
 

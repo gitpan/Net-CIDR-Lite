@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.15';
+$VERSION = '0.16';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -336,7 +336,7 @@ sub find {
     my %results;
     my $in_range;
     $self->prep_find unless $self->{FIND};
-    return {} unless @_;
+    return {} unless @_ and @{$self->{FIND}};
     return $self->bin_find(@_) if @_/@{$self->{FIND}} < $self->{PCT};
     my @ips = sort map { $pack->($_) || confess "Bad IP: $_" } @_;
     my $last;
@@ -437,6 +437,8 @@ Faster alternative to Net::CIDR when merging a large number
 of CIDR address ranges. Works for IPv4 and IPv6 addresses.
 
 =head1 METHODS
+
+=over 4
 
 =item new() 
 
@@ -571,6 +573,8 @@ what you will find as the key in the result from the $spanner->find(..),
 not necessarily what the original argument looked like). E.g. removes
 unnecessary leading zeros, removes null blocks from IPv6
 addresses, etc.
+
+=back
 
 =head1 CAVEATS
 
