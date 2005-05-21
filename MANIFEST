@@ -2,6 +2,8 @@ Changes
 Lite.pm
 Makefile.PL
 MANIFEST
+META.yml
 README
-test.pl
-META.yml                                 Module meta-data (added by MakeMaker)
+t/base.t
+t/pod.t
+t/podcov.t

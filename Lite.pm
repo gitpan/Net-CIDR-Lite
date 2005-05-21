@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.17';
+$VERSION = '0.18';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -294,12 +294,12 @@ sub spanner {
     Net::CIDR::Lite::Span->new(@_);
 }
 
-sub ranges {
+sub _ranges {
     sort keys %{shift->{RANGES}};
 }
 
-sub packer { shift->{PACK} }
-sub unpacker { shift->{UNPACK} }
+sub _packer { shift->{PACK} }
+sub _unpacker { shift->{UNPACK} }
 
 package Net::CIDR::Lite::Span;
 use Carp qw(confess);
@@ -315,14 +315,14 @@ sub add {
     my $self = shift;
     my $ranges = $self->{RANGES};
     if (@_ && !$self->{PACK}) {
-        $self->{PACK} = $_[0]->packer;
-        $self->{UNPACK} = $_[0]->unpacker;
+        $self->{PACK} = $_[0]->_packer;
+        $self->{UNPACK} = $_[0]->_unpacker;
     }
     while (@_) {
         my ($cidr, $label) = (shift, shift);
         $cidr = Net::CIDR::Lite->new($cidr) unless ref($cidr);
         $cidr->clean;
-        for my $ip ($cidr->ranges) {
+        for my $ip ($cidr->_ranges) {
             push @{$ranges->{$ip}}, $label;
         }
     }
@@ -522,6 +522,10 @@ The sort is cached on the first call and used in subsequent calls,
 but if more addresses are added to the cidr object, prep_find() must
 be called on the cidr object.
 
+=item $cidr->bin_find()
+
+Same as find(), but forces a binary search. See also prep_find.
+
 =item $cidr->prep_find()
 
  $cidr->prep_find($num);
@@ -556,6 +560,10 @@ hyphenated IP address range, or a single IP address.
 Look up which range(s) ip addresses are in, and return a lookup table
 of the results, with the keys being the ip addresses, and the value a
 hash reference of which address ranges the ip address is in.
+
+=item $spanner->bin_find()
+
+Same as find(), but forces a binary search. See also prep_find.
 
 =item $spanner->prep_find()
 

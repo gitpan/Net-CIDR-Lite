@@ -1,5 +1,8 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.18  Sat May 20 01:00:00 2005
+    - Documented bin_find().
+    - Added pod tests. Watch my kwalitee go up! Woohoo!
 0.17  Wed May 18 12:00:00 2005
     - Fixed last fix and corresponding test.
 0.16  Wed May 18 10:00:00 2005
