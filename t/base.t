@@ -8,9 +8,9 @@
 use Test;
 use strict;
 $|++;
-BEGIN { plan tests => 33 };
+BEGIN { plan tests => 34 };
 use Net::CIDR::Lite;
-ok(1); # If we made it this far, we're ok.
+ok(1); # If we made it this far, we are ok.
 
 #########################
 
@@ -104,3 +104,10 @@ my $empty_href = $empty_spanner->find("127.0.0.1");
 ok(ref($empty_href), 'HASH');
 ok(ref($empty_href->{"127.0.0.1"}), 'HASH');
 ok(! %{$empty_href->{"127.0.0.1"}});
+
+# Bad addr test
+my $err_cidr = Net::CIDR::Lite->new;
+$err_cidr->add("209.152.214.112/30");
+eval { $err_cidr->add("209.152.214.112/33") };
+ok($@ =~ /Bad mask/);
+

@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.19';
+$VERSION = '0.20';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -37,7 +37,7 @@ sub add {
     my ($ip, $mask) = split "/", shift;
     $self->_init($ip) || confess "Can't determine ip format" unless %$self;
     confess "Bad mask $mask"
-        unless $mask =~ /^\d+$/ and 0 <= $mask and $mask <= $self->{NBITS};
+        unless $mask =~ /^\d+$/ and $mask <= $self->{NBITS}-8;
     $mask += 8;
     my $start = $self->{PACK}->($ip) & $self->{MASKS}[$mask]
         or confess "Bad ip address: $ip";

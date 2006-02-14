@@ -1,5 +1,7 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.20  Sun Feb 12 01:00:00 2006
+    - Fix error message on mask values.
 0.19  Sat Jan 30 01:00:00 2006
     - Allow net mask of zero.
 0.18  Sat May 20 01:00:00 2005
