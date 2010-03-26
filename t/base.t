@@ -8,7 +8,7 @@
 use Test;
 use strict;
 $|++;
-BEGIN { plan tests => 34 };
+BEGIN { plan tests => 39 };
 use Net::CIDR::Lite;
 ok(1); # If we made it this far, we are ok.
 
@@ -16,6 +16,9 @@ ok(1); # If we made it this far, we are ok.
 
 # Insert your test code below, the Test module is use()ed here so read
 # its man page ( perldoc Test ) for help writing this test script.
+
+my $empty = Net::CIDR::Lite->new;
+ok(!$empty->find('127.0.0.1'));
 
 my $cidr = Net::CIDR::Lite->new;
 
@@ -110,4 +113,23 @@ my $err_cidr = Net::CIDR::Lite->new;
 $err_cidr->add("209.152.214.112/30");
 eval { $err_cidr->add("209.152.214.112/33") };
 ok($@ =~ /Bad mask/);
+
+# Test list shor range
+my @list_short_range = Net::CIDR::Lite->new('0.0.0.0/32')->list_short_range;
+ok(scalar(@list_short_range), 1, 'should have one "range"');
+ok($list_short_range[0], '0.0.0.0', 'that is 0.0.0.0');
+
+@list_short_range = sort Net::CIDR::Lite->new(qw{
+	10.0.0.1
+	10.0.0.5
+	10.0.0.2
+})->list_short_range;
+ok(join(', ', @list_short_range), '10.0.0.1-2, 10.0.0.5');
+
+@list_short_range = sort Net::CIDR::Lite->new(qw{
+	10.0.0.250-10.0.1.20
+	10.0.1.22
+	10.0.2.250-10.0.5.8
+})->list_short_range;
+ok(join(', ', @list_short_range), '10.0.0.250-255, 10.0.1.0-20, 10.0.1.22, 10.0.2.250-255, 10.0.3.0-255, 10.0.4.0-255, 10.0.5.0-8');
 

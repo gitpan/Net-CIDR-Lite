@@ -1,5 +1,13 @@
 Revision history for Perl extension Net::CIDR::Lite.
 
+0.21  Wed Mar 28 14:34:18 2007
+    - Fix RT Tickets:
+    - 14535: Fix spanner clean() docs (reported by carbon at pobox.com).
+    - 25898: Undef dereference with empty object (patch by Adam Tomason).
+    - 30777: Add short_list_range() method (patch by Josef Kutej).
+    - 48308: clean() or list() before add() causes error (reported by David Cawley).
+    - 50042: spanner add() did not accept non-object (patch by Tomo.M).
+    - 52571: "::" not accepted as valid IPv6 address (reported by Tim Wilde).
 0.20  Sun Feb 12 01:00:00 2006
     - Fix error message on mask values.
 0.19  Sat Jan 30 01:00:00 2006

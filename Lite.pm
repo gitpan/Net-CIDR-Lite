@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Carp qw(confess);
 
-$VERSION = '0.20';
+$VERSION = '0.21';
 
 my %masks;
 my @fields = qw(PACK UNPACK NBITS MASKS);
@@ -49,6 +49,7 @@ sub add {
 
 sub clean {
     my $self = shift;
+    return $self unless $self->{RANGES};
     my $ranges = $$self{RANGES};
     my $total;
     $$self{RANGES} = {
@@ -61,6 +62,7 @@ sub clean {
 
 sub list {
     my $self = shift;
+    return unless $self->{NBITS};
     my $nbits = $$self{NBITS};
     my ($start, $total);
     my @results;
@@ -96,6 +98,54 @@ sub list_range {
             $ip = $self->_minus_one($ip);
             push @results,
                 $self->{UNPACK}->($start) . "-" . $self->{UNPACK}->($ip);
+        }
+    }
+    wantarray ? @results : \@results;
+}
+
+sub list_short_range {
+    my $self = shift;
+    
+    my $start;
+    my $total;
+    my @results;
+    
+    for my $ip (sort keys %{$$self{RANGES}}) {
+    	# we begin new range when $total is zero
+        $start = $ip if not $total;
+        
+        # add to total (1 for start of the range or -1 for end of the range)
+        $total += $$self{RANGES}{$ip};
+        
+        # in case of end of range
+        if (not $total) {
+        	while ($ip gt $start) {
+	            $ip = $self->_minus_one($ip);
+	            
+	            # in case of single ip not a range
+				if ($ip eq $start) {
+	            	push @results,
+	                	$self->{UNPACK}->($start);
+	                next;					
+				}
+	            
+	            # get the last ip octet number
+	            my $to_octet = ( unpack('C5', $ip) )[4];
+
+				# next ip end will be current end masked by c subnet mask 255.255.255.0 - /24
+	            $ip = $ip & $self->{MASKS}[32];
+
+	            # if the ip range is in the same c subnet
+	            if ($ip eq ($start & $self->{MASKS}[32])) {
+	            	push @results,
+	                	$self->{UNPACK}->($start) . "-" . $to_octet;
+	            }
+	            # otherwise the range start is .0 (end of range masked by c subnet mask)
+	            else {
+	            	push @results,
+	                	$self->{UNPACK}->($ip & $self->{MASKS}[32]) . "-" . $to_octet;	            	
+	            }
+	        };
         }
     }
     wantarray ? @results : \@results;
@@ -142,6 +192,7 @@ sub _unpack_ipv4 {
 
 sub _pack_ipv6 {
     my $ip = shift;
+    $ip =~ s/^::$/::0/;
     return if $ip =~ /^:/ and $ip !~ s/^::/:/;
     return if $ip =~ /:$/ and $ip !~ s/::$/:/;
     my @nums = split /:/, $ip, -1;
@@ -251,6 +302,7 @@ sub find {
     my $self = shift;
     $self->prep_find unless $self->{FIND};
     return $self->bin_find(@_) unless @{$self->{FIND}} < $self->{PCT};
+    return 0 unless $self->{PACK};
     my $this_ip = $self->{PACK}->(shift);
     my $ranges = $self->{RANGES};
     my $last = -1;
@@ -315,8 +367,10 @@ sub add {
     my $self = shift;
     my $ranges = $self->{RANGES};
     if (@_ && !$self->{PACK}) {
-        $self->{PACK} = $_[0]->_packer;
-        $self->{UNPACK} = $_[0]->_unpacker;
+        my $cidr = $_[0];
+        $cidr = Net::CIDR::Lite->new($cidr) unless ref($cidr);
+        $self->{PACK} = $cidr->_packer;
+        $self->{UNPACK} = $cidr->_unpacker;
     }
     while (@_) {
         my ($cidr, $label) = (shift, shift);
@@ -413,6 +467,11 @@ sub prep_find {
 
 sub clean {
     my $self = shift;
+    unless ($self->{PACK}) {
+      my $ip = shift;
+      my $cidr = Net::CIDR::Lite->new($ip);
+      return $cidr->clean($ip);
+    }
     my $ip = $self->{PACK}->(shift) || return;
     $self->{UNPACK}->($ip);
 }
@@ -504,12 +563,30 @@ in list context, an array reference if not.
 
 =item $cidr->list_range()
 
- @cidr_list = $cidr->list;
- $list_ref  = $cidr->list;
+ @cidr_list = $cidr->list_range;
+ $list_ref  = $cidr->list_range;
 
 Returns a list of the merged addresses, but in hyphenated range
 format. Returns an array if called in list context, an array reference
 if not.
+
+=item $cidr->list_short_range()
+
+ @cidr_list = $cidr->list_short_range;
+ $list_ref  = $cidr->list_short_range;
+
+Returns a list of the C subnet merged addresses, in short hyphenated range
+format. Returns an array if called in list context, an array reference
+if not.
+
+Example:
+
+	1.1.1.1-2
+	1.1.1.5-7
+	1.1.1.254-255
+	1.1.2.0-2
+	1.1.3.5
+	1.1.3.7
 
 =item $cidr->find()
 
@@ -578,7 +655,7 @@ is less than $num percent (default 4).
 
  $clean_address = $spanner->clean($ip_address);
 
-Validates a returns a cleaned up version of an ip address (which is
+Validates and returns a cleaned up version of an ip address (which is
 what you will find as the key in the result from the $spanner->find(..),
 not necessarily what the original argument looked like). E.g. removes
 unnecessary leading zeros, removes null blocks from IPv6
